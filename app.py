@@ -23,21 +23,37 @@ def extrair_badges_com_cookies(username, cookies_str):
     try:
         url = f"https://habblive.in/perfil?nome={username}"
         
+        # Converte string de cookies em dicionário
+        cookies_dict = {}
+        for cookie in cookies_str.split('; '):
+            if '=' in cookie:
+                key, value = cookie.split('=', 1)
+                cookies_dict[key] = value
+        
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Cookie': cookies_str,
             'Referer': 'https://habblive.in/',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
         }
         
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, cookies=cookies_dict, timeout=15, allow_redirects=True)
         
         # Debug: mostra status
-        print(f"📡 Status: {response.status_code} | URL: {url}")
+        print(f"📡 Status: {response.status_code} | URL: {response.url}")
+        print(f"🍪 Cookies enviados: {len(cookies_dict)} cookies")
         
         if response.status_code != 200:
             print(f"❌ Status code: {response.status_code}")
             return None, f"HTTP {response.status_code}"
+        
+        # Verifica se foi redirecionado para login
+        if "login" in response.url.lower() or "/entrar" in response.url.lower():
+            print("❌ Redirecionado para página de login")
+            return None, "Sessão expirou - faça login novamente no navegador"
         
         soup = BeautifulSoup(response.text, 'html.parser')
         badges_encontrados = set()
@@ -72,10 +88,21 @@ def extrair_badges_com_cookies(username, cookies_str):
         
         print(f"✅ Total de badges encontrados: {len(badges_encontrados)}")
         
-        # Verifica se está realmente autenticado
+        # REMOVIDA a verificação de "login" ou "entrar" no HTML
+        # pois pode causar falsos positivos
+        
+        # Se não encontrou nenhum badge, verifica se o perfil existe
         if len(badges_encontrados) == 0:
-            if "login" in html_text.lower() or "entrar" in html_text.lower():
-                return None, "Sessão não autenticada - faça login no navegador primeiro"
+            # Verifica se há indicação de que é uma página de perfil válida
+            if soup.find('div', {'class': 'profile'}) or soup.find('div', {'id': 'profile'}):
+                print("⚠️ Perfil válido, mas sem badges EV25DEZ")
+                return [], None  # Retorna lista vazia, não erro
+            else:
+                print("❌ Página de perfil não reconhecida")
+                # Salva HTML para debug (opcional)
+                with open('debug_page.html', 'w', encoding='utf-8') as f:
+                    f.write(html_text)
+                return None, "Não foi possível acessar o perfil - verifique se está logado"
         
         return list(badges_encontrados), None
         
@@ -92,7 +119,7 @@ def home():
     return jsonify({
         "status": "online",
         "message": "HabbLive Badge API",
-        "version": "2.0",
+        "version": "2.1",
         "endpoints": {
             "/api/next-badge-cookie": "POST - Usa cookies do browser"
         }
@@ -129,6 +156,7 @@ def next_badge_cookie():
             return jsonify({"ok": False, "error": "Cookies não fornecidos"}), 400
         
         print(f"🔍 Buscando badges de: {user}")
+        print(f"🍪 Cookies recebidos: {cookies_str[:100]}...")
         
         # Extrai badges
         badges_usuario, error = extrair_badges_com_cookies(user, cookies_str)
