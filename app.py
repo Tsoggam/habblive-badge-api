@@ -7,7 +7,6 @@ load_dotenv()
 
 API_KEY = os.getenv("API_KEY", "74839432")
 
-# Lista completa de emblemas
 ALL_BADGES = [f"EV25DEZ{str(i+1).zfill(2)}" for i in range(100)]
 
 app = Flask(__name__)
@@ -15,11 +14,10 @@ CORS(app)
 
 @app.route("/", methods=["GET"])
 def home():
-    """Rota de teste"""
     return jsonify({
         "status": "online",
         "message": "HabbLive Badge API",
-        "version": "3.0",
+        "version": "3.1",
         "endpoints": {
             "/api/next-badge-cookie": "POST - Recebe lista de badges do Tampermonkey"
         }
@@ -27,14 +25,11 @@ def home():
 
 @app.route("/api/health", methods=["GET"])
 def health():
-    """Health check"""
     return jsonify({"status": "ok", "timestamp": __import__("time").time()})
 
 @app.route("/api/next-badge-cookie", methods=["POST"])
 def next_badge_cookie():
-    """
-    Endpoint que recebe lista de badges do Tampermonkey
-    """
+
     try:
         data = request.json
         
@@ -45,7 +40,6 @@ def next_badge_cookie():
         key = data.get("key")
         badges_usuario = data.get("badges", [])
         
-        # Validações
         if key != API_KEY:
             return jsonify({"ok": False, "error": "API_KEY inválida"}), 403
         
@@ -58,16 +52,14 @@ def next_badge_cookie():
         print(f"📋 Badges: {badges_usuario}")
         print(f"{'='*60}\n")
         
-        # Filtra apenas badges EV25DEZ válidos
         badges_validos = [b for b in badges_usuario if b in ALL_BADGES]
         
         print(f"✅ Badges válidos: {len(badges_validos)}")
         
-        # Calcula badges faltantes
         badges_faltantes = [b for b in ALL_BADGES if b not in badges_validos]
         
-        # Verifica se zerou
-        if not badges_faltantes:
+        if len(badges_validos) >= 100:
+            print(f"\n🏆 {user} JÁ ZEROU! ({len(badges_validos)}/100)\n")
             return jsonify({
                 "ok": True,
                 "message": "Usuário já possui todos os badges!",
