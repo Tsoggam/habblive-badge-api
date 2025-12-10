@@ -1,6 +1,6 @@
 # HabbLive Badge API
 
-API para gerenciar badges do HabbLive
+API de entrega automática de emblemas.
 
 ## Deploy no Render
 1. Conecte seu repositório GitHub
