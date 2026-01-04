@@ -7,7 +7,7 @@ load_dotenv()
 
 API_KEY = os.getenv("API_KEY", "74839432")
 
-ALL_BADGES = [f"EV25DEZ{str(i+1).zfill(2)}" for i in range(100)]
+ALL_BADGES = [f"EV26JAN{str(i+1).zfill(2)}" for i in range(100)]
 
 app = Flask(__name__)
 CORS(app)
