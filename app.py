@@ -33,6 +33,10 @@ def add_user_badge(username, badge):
         "created_at": int(time.time())
     }, on_conflict="username,badge").execute()
 
+def bulk_add_user_badges(username, badges):
+    rows = [{"username": username.lower(), "badge": b, "created_at": int(time.time())} for b in badges]
+    supabase.table("user_badges").upsert(rows, on_conflict="username,badge").execute()
+
 def reset_user_badges(username):
     supabase.table("user_badges") \
         .delete() \
@@ -56,6 +60,7 @@ def next_badge_cookie():
 
         user = data.get("user")
         key = data.get("key")
+        badges_externos = data.get("badges", [])
 
         if key != API_KEY:
             return jsonify({"ok": False, "error": "API_KEY inválida"}), 403
@@ -64,6 +69,14 @@ def next_badge_cookie():
             return jsonify({"ok": False, "error": "Usuário não encontrado."}), 400
 
         badges_entregues = get_user_badges(user)
+
+        # Primeira vez no banco E scraping trouxe dados → popula o banco
+        if len(badges_entregues) == 0 and len(badges_externos) > 0:
+            badges_validos = [b for b in badges_externos if b in ALL_BADGES]
+            if badges_validos:
+                bulk_add_user_badges(user, badges_validos)
+                badges_entregues = get_user_badges(user)
+
         badges_faltantes = [b for b in ALL_BADGES if b not in badges_entregues]
 
         if not badges_faltantes:
