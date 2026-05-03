@@ -23,7 +23,7 @@ CORS(app)
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 def badge_code(n: int) -> str:
-    return f"EV26ABR{str(n).zfill(2)}"
+    return f"EV26MAI{str(n).zfill(2)}"
 
 def get_level(username: str):
     """Retorna o level atual do usuário ou None se não existir."""
